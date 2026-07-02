@@ -9,7 +9,19 @@ export type ActivityType =
   | "match"
   | "chat";
 
-export type LessonStatus = "locked" | "available" | "completed";
+export type LessonStatus = "available" | "completed" | "inProgress" | "locked";
+
+export type LessonImageKey =
+  | "cafe"
+  | "classroom"
+  | "dailyLife"
+  | "family"
+  | "food"
+  | "greetings"
+  | "introductions"
+  | "numbers"
+  | "shopping"
+  | "travel";
 
 export type SupportedLanguage = {
   code: LanguageCode;
@@ -113,6 +125,7 @@ export type Lesson = {
   languageCode: LanguageCode;
   title: string;
   description: string;
+  imageKey: LessonImageKey;
   level: LessonLevel;
   order: number;
   xpReward: number;
