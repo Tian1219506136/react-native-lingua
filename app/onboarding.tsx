@@ -73,7 +73,7 @@ export default function OnboardingScreen() {
           <View className="h-[9px] w-[9px] rounded-full bg-lingua-border" />
         </View>
 
-        <Link href="/" asChild>
+        <Link href="/sign-up" asChild>
           <Pressable className="h-[86px] flex-row items-center justify-center rounded-[22px] bg-lingua-deep-purple active:bg-lingua-purple">
             <Text className="font-poppins-semibold text-[22px] leading-[29px] text-white">
               Get Started

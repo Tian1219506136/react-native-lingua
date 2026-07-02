@@ -1,6 +1,6 @@
 import "../global.css";
 
-import { fonts } from "@/theme/tokens";
+import { colors, fonts } from "@/theme/tokens";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -29,7 +29,7 @@ export default function RootLayout() {
   return (
     <Stack
       screenOptions={{
-        contentStyle: { backgroundColor: "#FFFFFF" },
+        contentStyle: { backgroundColor: colors.neutral.background },
         headerShown: false,
       }}
     />

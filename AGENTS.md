@@ -463,6 +463,15 @@ Fix errors.
 
 ---
 
+## Git Rules
+
+- Work happens on the `dev` branch; `main` is the stable baseline.
+- **Do not commit or push unless the user explicitly asks.** The user commits after visually accepting the feature on a device (one chapter/feature = one commit = one checkpoint).
+- Never rewrite history (`--amend`, rebase, force-push) on commits you did not create in the current task.
+- If a git network command fails with `Empty reply from server` or similar transient network errors, retry once before reporting — it is usually a VPN blip, not a config problem.
+
+---
+
 ## Communication Style
 
 Be concise.
