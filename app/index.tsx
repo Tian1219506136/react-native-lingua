@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/expo";
 import { images } from "@/constants/images";
 import { colors } from "@/theme/tokens";
-import { Redirect } from "expo-router";
+import { Link, Redirect } from "expo-router";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 
 const primaryTokens = [
@@ -64,6 +64,14 @@ export default function Index() {
           Sign out (temp)
         </Text>
       </Pressable>
+
+      <Link href="/language-selection" asChild>
+        <Pressable className="mb-5 self-start rounded-2xl bg-lingua-purple px-5 py-3 active:bg-lingua-deep-purple">
+          <Text className="font-poppins-semibold text-[16px] leading-[22px] text-lingua-background">
+            Choose a language
+          </Text>
+        </Pressable>
+      </Link>
 
       <View className="gap-4 lg:flex-row">
         <View className="flex-1 gap-4">
