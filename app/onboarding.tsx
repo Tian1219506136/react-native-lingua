@@ -1,11 +1,22 @@
+import { useAuth } from "@clerk/expo";
 import { images } from "@/constants/images";
 import { colors } from "@/theme/tokens";
-import { Link } from "expo-router";
+import { Link, Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OnboardingScreen() {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (isSignedIn) {
+    return <Redirect href="/" />;
+  }
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.neutral.background }}

@@ -1,7 +1,8 @@
+import { useAuth } from "@clerk/expo";
 import { images } from "@/constants/images";
 import { colors } from "@/theme/tokens";
-import { Link } from "expo-router";
-import { Image, ScrollView, Text, View } from "react-native";
+import { Redirect } from "expo-router";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 
 const primaryTokens = [
   ["LINGUA PURPLE", colors.primary.purple],
@@ -38,18 +39,31 @@ const typeRows = [
 ] as const;
 
 export default function Index() {
+  const { isLoaded, isSignedIn, signOut } = useAuth();
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/onboarding" />;
+  }
+
   return (
     <ScrollView
       className="flex-1 ds-screen"
       contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      <Link
-        href="/onboarding"
-        className="mb-5 self-start rounded-2xl bg-lingua-deep-purple px-5 py-3 font-poppins-semibold text-[16px] leading-[22px] text-white"
+      {/* TEMP: QA-only sign-out; remove once real profile/settings screen exists */}
+      <Pressable
+        className="mb-5 self-start rounded-2xl border border-lingua-border bg-lingua-background px-5 py-3 active:bg-lingua-surface"
+        onPress={() => void signOut()}
       >
-        Open onboarding
-      </Link>
+        <Text className="font-poppins-semibold text-[16px] leading-[22px] text-lingua-error">
+          Sign out (temp)
+        </Text>
+      </Pressable>
 
       <View className="gap-4 lg:flex-row">
         <View className="flex-1 gap-4">
