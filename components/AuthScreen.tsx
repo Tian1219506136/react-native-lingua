@@ -5,6 +5,7 @@ import { AntDesign, Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { usePostHog } from "posthog-react-native";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import {
@@ -63,6 +64,7 @@ export function AuthScreen({
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const { startSSOFlow } = useSSO();
+  const posthog = usePostHog();
   const [isVerificationVisible, setIsVerificationVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -183,6 +185,7 @@ export function AuthScreen({
           throw finalizeError;
         }
 
+        posthog.capture("sign_up_completed");
         setIsVerificationVisible(false);
         router.replace("/");
         return;
