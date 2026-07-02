@@ -1,5 +1,6 @@
 import { images } from "@/constants/images";
 import { colors } from "@/theme/tokens";
+import { Link } from "expo-router";
 import { Image, ScrollView, Text, View } from "react-native";
 
 const primaryTokens = [
@@ -43,6 +44,13 @@ export default function Index() {
       contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
+      <Link
+        href="/onboarding"
+        className="mb-5 self-start rounded-2xl bg-lingua-deep-purple px-5 py-3 font-poppins-semibold text-[16px] leading-[22px] text-white"
+      >
+        Open onboarding
+      </Link>
+
       <View className="gap-4 lg:flex-row">
         <View className="flex-1 gap-4">
           <View className="ds-panel px-6 py-7">

@@ -1,3 +1,5 @@
+// NOTE: color values duplicated in global.css @theme (for className usage).
+// When changing a color that exists in both files, update BOTH.
 export const colors = {
   primary: {
     purple: "#6C4EF5",

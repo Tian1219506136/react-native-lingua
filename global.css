@@ -4,6 +4,8 @@
 
 @import "nativewind/theme";
 
+/* NOTE: color values duplicated in theme/tokens.ts (for StyleSheet-exception cases).
+   When changing a color that exists in both files, update BOTH. */
 @theme {
   --font-poppins: "Poppins";
   --font-poppins-medium: "Poppins-Medium";
@@ -24,6 +26,12 @@
   --color-lingua-border: #e5e7eb;
   --color-lingua-surface: #f6f7fb;
   --color-lingua-background: #ffffff;
+
+  /* onboarding speech-bubble palette */
+  --color-lingua-bubble-blue: #eef7ff;
+  --color-lingua-bubble-purple: #f8f7ff;
+  --color-lingua-bubble-peach: #fff4ee;
+  --color-lingua-accent-red: #ff3d2e;
 
   --radius-lingua-card: 14px;
   --radius-lingua-swatch: 9px;

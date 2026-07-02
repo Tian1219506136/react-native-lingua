@@ -186,6 +186,14 @@ When building from an attached design image:
 
 Prefer reusable class patterns through utilities in `global.css`. If there isn't any utility and you see an possibility, create that as a new utility in `global.css` by following BEM method.
 
+### Color Token Rules (MANDATORY)
+
+- **Never hardcode hex colors in screens or components.** No arbitrary values like `bg-[#EEF7FF]`, `text-[#FF3D2E]`, or `backgroundColor: "#FFFFFF"`.
+- If a design needs a color that has no token yet: **first add it as a `--color-*` token in the `@theme` block of `global.css`, then reference it by className** (e.g. `bg-lingua-bubble-blue`).
+- Token ownership: design-system tokens live in `theme/tokens.ts` (JS side — StyleSheet-exception cases like `SafeAreaView`, fonts loading); NativeWind-facing token/utility names live in `global.css` `@theme` / `@utility`.
+- For StyleSheet-exception components, take colors from `theme/tokens.ts` (e.g. `colors.neutral.background`), never a raw hex.
+- Some color values exist in BOTH `global.css` and `theme/tokens.ts` — when changing one, **update both** (see the sync notes at the top of each file).
+
 ## Avoid large inline styles unless required.
 
 ## NativeWind Rule
