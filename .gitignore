@@ -48,3 +48,8 @@ app-example
 
 # GetStream agent skill packs (installed via npx skills add); local AI tooling, not app code
 .agents/skills/stream*/
+
+# Vision Agents Python service local artifacts
+vision-agent/.venv/
+vision-agent/__pycache__/
+vision-agent/*.egg-info/

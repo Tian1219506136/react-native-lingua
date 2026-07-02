@@ -22,7 +22,8 @@ type VerifiedClerkUser = {
   id: string;
 };
 
-const callType = "default";
+const audioRoomCallType = "audio_room";
+const agentUserId = "lingua-ai-teacher";
 const streamBaseUrl = "https://video.stream-io-api.com/video";
 
 export async function POST(request: Request) {
@@ -75,27 +76,40 @@ export async function POST(request: Request) {
       lessonId: lesson.id,
       userId: user.id,
     });
+    const callToken = await createStreamUserToken({
+      callCid: `${audioRoomCallType}:${callId}`,
+      role: "admin",
+      secret: streamApiSecret,
+      userId: user.id,
+    });
 
     await createAudioOnlyCall({
       apiKey: streamApiKey,
       callId,
-      token,
+      token: callToken,
       userId: user.id,
       userImage: body.userImage,
       userName: body.userName,
       metadata: {
+        aiTeacherPrompt: lesson.aiTeacherPrompt,
+        goals: lesson.goals,
         languageCode: language.code,
         languageName: language.name,
+        languageNativeName: language.nativeName,
         lessonId: lesson.id,
+        lessonDescription: lesson.description,
+        lessonLevel: lesson.level,
         lessonTitle: lesson.title,
+        phrases: lesson.phrases,
         unitId: lesson.unitId,
+        vocabulary: lesson.vocabulary,
       },
     });
 
     return Response.json({
       apiKey: streamApiKey,
       callId,
-      callType,
+      callType: audioRoomCallType,
       token,
       userId: user.id,
       userImage: body.userImage ?? undefined,
@@ -110,7 +124,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function verifyClerkUser(
+export async function verifyClerkUser(
   request: Request,
 ): Promise<VerifiedClerkUser | null> {
   const authHeader = request.headers.get("authorization");
@@ -141,13 +155,13 @@ async function createAudioOnlyCall({
 }: {
   apiKey: string;
   callId: string;
-  metadata: Record<string, string>;
+  metadata: Record<string, unknown>;
   token: string;
   userId: string;
   userImage?: string | null;
   userName?: string | null;
 }) {
-  const requestUrl = new URL(`${streamBaseUrl}/call/${callType}/${callId}`);
+  const requestUrl = new URL(`${streamBaseUrl}/call/${audioRoomCallType}/${callId}`);
   requestUrl.searchParams.set("api_key", apiKey);
   requestUrl.searchParams.set("user_id", userId);
 
@@ -161,16 +175,23 @@ async function createAudioOnlyCall({
         },
         members: [
           {
+            role: "admin",
             user_id: userId,
             custom: {
               image: userImage ?? undefined,
               name: userName ?? userId,
             },
           },
+          {
+            role: "admin",
+            user_id: agentUserId,
+          },
         ],
+        // Stream validation: audio overrides require default_device, and any
+        // video override triggers target_resolution checks — omit video
+        // entirely (the client disables the camera after joining anyway).
         settings_override: {
-          audio: { mic_default_on: true },
-          video: { camera_default_on: false },
+          audio: { default_device: "speaker", mic_default_on: true },
         },
       },
     }),
@@ -187,12 +208,19 @@ async function createAudioOnlyCall({
     const detail = await response.text();
     throw new Error(`Stream call creation failed: ${response.status} ${detail}`);
   }
+
+  await grantAgentAudioPermission({ apiKey, callId, token, userId });
+  await goLiveAudioRoom({ apiKey, callId, token, userId });
 }
 
 async function createStreamUserToken({
+  callCid,
+  role,
   secret,
   userId,
 }: {
+  callCid?: string;
+  role?: string;
   secret: string;
   userId: string;
 }) {
@@ -201,14 +229,20 @@ async function createStreamUserToken({
 
   return signJwt(
     { alg: "HS256", typ: "JWT" },
-    { exp: expiresAt, iat: issuedAt, user_id: userId },
+    {
+      ...(callCid ? { call_cids: [callCid] } : {}),
+      ...(role ? { role } : {}),
+      exp: expiresAt,
+      iat: issuedAt,
+      user_id: userId,
+    },
     secret,
   );
 }
 
 async function signJwt(
   header: Record<string, string>,
-  payload: Record<string, number | string>,
+  payload: Record<string, number | string | string[]>,
   secret: string,
 ) {
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
@@ -228,6 +262,78 @@ async function signJwt(
   );
 
   return `${unsignedToken}.${base64UrlEncode(signature)}`;
+}
+
+async function grantAgentAudioPermission({
+  apiKey,
+  callId,
+  token,
+  userId,
+}: {
+  apiKey: string;
+  callId: string;
+  token: string;
+  userId: string;
+}) {
+  const requestUrl = new URL(
+    `${streamBaseUrl}/call/${audioRoomCallType}/${callId}/user_permissions`,
+  );
+  requestUrl.searchParams.set("api_key", apiKey);
+  requestUrl.searchParams.set("user_id", userId);
+
+  const response = await fetch(requestUrl.toString(), {
+    body: JSON.stringify({
+      grant_permissions: ["send-audio"],
+      user_id: agentUserId,
+    }),
+    headers: getStreamServerHeaders(token),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `Stream agent audio permission failed: ${response.status} ${detail}`,
+    );
+  }
+}
+
+async function goLiveAudioRoom({
+  apiKey,
+  callId,
+  token,
+  userId,
+}: {
+  apiKey: string;
+  callId: string;
+  token: string;
+  userId: string;
+}) {
+  const requestUrl = new URL(
+    `${streamBaseUrl}/call/${audioRoomCallType}/${callId}/go_live`,
+  );
+  requestUrl.searchParams.set("api_key", apiKey);
+  requestUrl.searchParams.set("user_id", userId);
+
+  const response = await fetch(requestUrl.toString(), {
+    body: JSON.stringify({}),
+    headers: getStreamServerHeaders(token),
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Stream audio room goLive failed: ${response.status} ${detail}`);
+  }
+}
+
+function getStreamServerHeaders(token: string) {
+  return {
+    Authorization: token,
+    "Content-Type": "application/json",
+    "stream-auth-type": "jwt",
+    "X-Stream-Client": "lingua-expo-api-route",
+  };
 }
 
 function base64UrlEncode(value: ArrayBuffer | string) {
