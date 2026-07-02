@@ -2,7 +2,13 @@ import { colors } from "@/theme/tokens";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export function TabPlaceholderScreen({ title }: { title: string }) {
+export function TabPlaceholderScreen({
+  subtitle = "Placeholder screen",
+  title,
+}: {
+  subtitle?: string;
+  title: string;
+}) {
   return (
     <SafeAreaView
       edges={["top", "left", "right"]}
@@ -13,7 +19,7 @@ export function TabPlaceholderScreen({ title }: { title: string }) {
           {title}
         </Text>
         <Text className="mt-3 text-center font-poppins text-[16px] leading-[25px] text-lingua-muted">
-          Placeholder screen
+          {subtitle}
         </Text>
       </View>
     </SafeAreaView>

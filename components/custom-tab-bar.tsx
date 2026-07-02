@@ -23,23 +23,47 @@ const tabIcons: Record<string, IconName> = {
   profile: "person-outline",
 };
 
+// Hidden (href: null) routes that should highlight another tab while focused.
+const hiddenRouteFallback: Record<string, string> = {
+  "lesson/[lessonId]": "learn",
+};
+
 export function CustomTabBar({
   descriptors,
   navigation,
   state,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const activeIndex = useSharedValue(state.index);
   const [barWidth, setBarWidth] = useState(0);
-  const slotWidth = barWidth / state.routes.length;
+
+  // Hidden routes (href: null) can't be detected via options.href — expo-router
+  // strips `href` from options and converts it to tabBarItemStyle display:none
+  // (see expo-router TabsClient). Filter by the explicit tab allowlist instead.
+  const visibleRoutes = state.routes.filter(
+    (route) => route.name in tabIcons,
+  );
+  const focusedRoute = state.routes[state.index];
+  const focusedIsHidden = !(focusedRoute.name in tabIcons);
+  const activeName = focusedIsHidden
+    ? (hiddenRouteFallback[focusedRoute.name] ?? null)
+    : focusedRoute.name;
+  const activeVisibleIndex = visibleRoutes.findIndex(
+    (route) => route.name === activeName,
+  );
+  const slotWidth =
+    visibleRoutes.length > 0 ? barWidth / visibleRoutes.length : 0;
+
+  const activeIndex = useSharedValue(activeVisibleIndex);
 
   useEffect(() => {
-    activeIndex.value = withSpring(state.index, {
-      damping: 18,
-      mass: 0.75,
-      stiffness: 170,
-    });
-  }, [activeIndex, state.index]);
+    if (activeVisibleIndex >= 0) {
+      activeIndex.value = withSpring(activeVisibleIndex, {
+        damping: 18,
+        mass: 0.75,
+        stiffness: 170,
+      });
+    }
+  }, [activeIndex, activeVisibleIndex]);
 
   const activeIndicatorStyle = useAnimatedStyle(() => ({
     transform: [
@@ -52,8 +76,7 @@ export function CustomTabBar({
     ],
   }));
 
-  const activeRoute = state.routes[state.index];
-  const activeIcon = tabIcons[activeRoute.name] ?? "ellipse-outline";
+  const activeIcon = tabIcons[activeName ?? ""] ?? "ellipse-outline";
 
   return (
     <View
@@ -65,7 +88,7 @@ export function CustomTabBar({
         onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
         style={styles.tabBar}
       >
-        {barWidth > 0 ? (
+        {barWidth > 0 && activeVisibleIndex >= 0 ? (
           <Animated.View
             className="absolute top-[10px] items-center justify-center rounded-full bg-lingua-purple"
             pointerEvents="none"
@@ -82,11 +105,11 @@ export function CustomTabBar({
           </Animated.View>
         ) : null}
 
-        {state.routes.map((route, index) => {
+        {visibleRoutes.map((route) => {
           const options = descriptors[route.key].options;
           const label =
             typeof options.title === "string" ? options.title : route.name;
-          const isFocused = state.index === index;
+          const isFocused = route.name === activeName;
           const iconName = tabIcons[route.name] ?? "ellipse-outline";
 
           const onPress = () => {

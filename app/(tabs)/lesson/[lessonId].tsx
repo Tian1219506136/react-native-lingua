@@ -138,7 +138,7 @@ export default function AudioLessonScreen() {
           />
 
           <View
-            className="absolute left-[82px] right-[40px] top-[566px] rounded-[18px] bg-lingua-background px-7 py-5"
+            className="absolute bottom-[160px] left-[82px] right-[40px] rounded-[18px] bg-lingua-background px-7 py-5"
             style={styles.responseBubble}
           >
             <Text className="font-poppins-semibold text-[23px] leading-[31px] text-lingua-text">

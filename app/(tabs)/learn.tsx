@@ -14,6 +14,8 @@ import { colors } from "@/theme/tokens";
 import type { LanguageCode, Lesson, LessonStatus } from "@/types/learning";
 
 const fallbackLanguageCode: LanguageCode = "es";
+// TEMP: mock progress until the lesson-progress store chapter — derive from
+// persisted user progress (Zustand) once lesson completion is tracked.
 const currentLessonOrder = 3;
 
 function withAlpha(hex: string, alpha: number) {
@@ -100,7 +102,7 @@ export default function LearnScreen() {
               {selectedLesson.title}
             </Text>
             <Text className="mt-1 font-poppins-medium text-[18px] leading-[25px] text-lingua-muted">
-              Unit {unit.order} • {completedCount + 1} / {unitLessons.length} lessons
+              Unit {unit.order} • {Math.min(completedCount + 1, unitLessons.length)} / {unitLessons.length} lessons
             </Text>
           </View>
 
