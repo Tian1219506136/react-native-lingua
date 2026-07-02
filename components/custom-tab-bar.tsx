@@ -36,16 +36,14 @@ export function CustomTabBar({
   const insets = useSafeAreaInsets();
   const [barWidth, setBarWidth] = useState(0);
 
-  // Routes with href: null (e.g. the in-tab lesson screen) must not render a slot.
+  // Hidden routes (href: null) can't be detected via options.href — expo-router
+  // strips `href` from options and converts it to tabBarItemStyle display:none
+  // (see expo-router TabsClient). Filter by the explicit tab allowlist instead.
   const visibleRoutes = state.routes.filter(
-    (route) =>
-      (descriptors[route.key].options as { href?: string | null }).href !==
-      null,
+    (route) => route.name in tabIcons,
   );
   const focusedRoute = state.routes[state.index];
-  const focusedIsHidden =
-    (descriptors[focusedRoute.key].options as { href?: string | null })
-      .href === null;
+  const focusedIsHidden = !(focusedRoute.name in tabIcons);
   const activeName = focusedIsHidden
     ? (hiddenRouteFallback[focusedRoute.name] ?? null)
     : focusedRoute.name;
