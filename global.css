@@ -14,6 +14,8 @@
 
   --color-lingua-purple: #6c4ef5;
   --color-lingua-deep-purple: #5b3bf6;
+  --color-lingua-hero-purple-end: #7c4dff;
+  --color-lingua-hero-purple-start: #643cf6;
   --color-lingua-blue: #4d8bff;
   --color-lingua-green: #21c16b;
   --color-lingua-success: #21c16b;
@@ -26,6 +28,10 @@
   --color-lingua-border: #e5e7eb;
   --color-lingua-surface: #f6f7fb;
   --color-lingua-background: #ffffff;
+  --color-lingua-cream: #fff7ee;
+  --color-lingua-goal-track: #ffe4c6;
+  --color-lingua-plan-green: #f4fceb;
+  --color-lingua-soft-purple: #f2efff;
 
   /* onboarding speech-bubble palette */
   --color-lingua-bubble-blue: #eef7ff;

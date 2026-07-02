@@ -6,6 +6,8 @@ export const colors = {
     deepPurple: "#5B3BF6",
     blue: "#4D8BFF",
     green: "#21C16B",
+    heroPurpleEnd: "#7C4DFF",
+    heroPurpleStart: "#643CF6",
   },
   semantic: {
     success: "#21C16B",
@@ -20,6 +22,10 @@ export const colors = {
     border: "#E5E7EB",
     surface: "#F6F7FB",
     background: "#FFFFFF",
+    cream: "#FFF7EE",
+    goalTrack: "#FFE4C6",
+    planGreen: "#F4FCEB",
+    softPurple: "#F2EFFF",
   },
 } as const;
 

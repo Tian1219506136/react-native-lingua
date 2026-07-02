@@ -1,5 +1,5 @@
-import { TabPlaceholderScreen } from "@/components/tab-placeholder-screen";
+import { HomeScreenContent } from "@/components/home-screen";
 
 export default function HomeScreen() {
-  return <TabPlaceholderScreen title="Home" />;
+  return <HomeScreenContent />;
 }
