@@ -1,15 +1,29 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth, useUser } from "@clerk/expo";
+import {
+  CallingState,
+  StreamCall,
+  type Call,
+  useCall,
+  useCallStateHooks,
+  useStreamVideoClient,
+} from "@stream-io/video-react-native-sdk";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useLinguaStreamVideo } from "@/components/StreamVideoProvider";
 import { images } from "@/constants/images";
 import { getLanguageByCode } from "@/data/languages";
 import { getLessonById } from "@/data/lessons";
+import { fetchStreamAudioSession } from "@/lib/streamAudio";
+import { useLanguageStore } from "@/store/languageStore";
 import { colors } from "@/theme/tokens";
+import type { Lesson, SupportedLanguage } from "@/types/learning";
 
 function withAlpha(hex: string, alpha: number) {
   const normalizedHex = hex.replace("#", "");
@@ -23,7 +37,117 @@ function withAlpha(hex: string, alpha: number) {
 export default function AudioLessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const lesson = lessonId ? getLessonById(lessonId) : null;
-  const language = lesson ? getLanguageByCode(lesson.languageCode) : null;
+  const selectedLanguageCode = useLanguageStore(
+    (state) => state.selectedLanguageCode,
+  );
+  const selectedLanguage = selectedLanguageCode
+    ? getLanguageByCode(selectedLanguageCode)
+    : null;
+  const lessonLanguage = lesson ? getLanguageByCode(lesson.languageCode) : null;
+  const language =
+    selectedLanguage?.code === lesson?.languageCode
+      ? selectedLanguage
+      : lessonLanguage;
+  const streamClient = useStreamVideoClient();
+  const streamVideo = useLinguaStreamVideo();
+  const { getToken } = useAuth();
+  const { user } = useUser();
+  const [activeCall, setActiveCall] = useState<Call | null>(null);
+  const [callStatus, setCallStatus] = useState<AudioCallStatus>("idle");
+  const [callError, setCallError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activeCall?.state.callingState !== CallingState.LEFT) {
+        void activeCall?.leave().catch((error) => {
+          console.error("Failed to leave Stream audio call:", error);
+        });
+      }
+    };
+  }, [activeCall]);
+
+  const handleStartAudioCall = useCallback(async () => {
+    if (!lesson || !language) {
+      return;
+    }
+
+    if (!streamClient) {
+      setCallStatus("error");
+      setCallError(
+        streamVideo.error ?? "Stream is still connecting. Try again in a moment.",
+      );
+      return;
+    }
+
+    setCallStatus("connecting");
+    setCallError(null);
+
+    let nextCall: Call | null = null;
+
+    try {
+      const clerkToken = await getToken();
+      if (!clerkToken) {
+        throw new Error("Sign in again to start the audio lesson.");
+      }
+
+      const session = await fetchStreamAudioSession({
+        clerkToken,
+        payload: {
+          intent: "call",
+          languageCode: language.code,
+          lessonId: lesson.id,
+          userImage: user?.imageUrl,
+          userName:
+            user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? null,
+        },
+      });
+
+      if (!session.callId) {
+        throw new Error("The Stream call id was not returned.");
+      }
+
+      setCallStatus("joining");
+      const call = streamClient.call(
+        session.callType ?? "default",
+        session.callId,
+        { reuseInstance: true },
+      );
+      nextCall = call;
+      setActiveCall(nextCall);
+      nextCall.setDisconnectionTimeout(120);
+      await nextCall.join({ maxJoinRetries: 1 });
+      await nextCall.camera.disable();
+      setCallStatus("joined");
+    } catch (error) {
+      if (nextCall?.state.callingState !== CallingState.LEFT) {
+        await nextCall?.leave().catch((leaveError) => {
+          console.error("Failed to clean up Stream audio call:", leaveError);
+        });
+      }
+
+      setActiveCall(null);
+      setCallStatus("error");
+      setCallError(getErrorMessage(error));
+    }
+  }, [getToken, language, lesson, streamClient, streamVideo.error, user]);
+
+  const handleEndAudioCall = useCallback(async () => {
+    if (!activeCall) {
+      setCallStatus("ended");
+      return;
+    }
+
+    try {
+      if (activeCall.state.callingState !== CallingState.LEFT) {
+        await activeCall.leave();
+      }
+      setCallStatus("ended");
+      setActiveCall(null);
+    } catch (error) {
+      setCallStatus("error");
+      setCallError(getErrorMessage(error));
+    }
+  }, [activeCall]);
 
   if (!lesson || !language) {
     return (
@@ -46,12 +170,143 @@ export default function AudioLessonScreen() {
     );
   }
 
+  const userName =
+    user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "Signed-in learner";
+
+  if (activeCall) {
+    return (
+      <StreamCall call={activeCall}>
+        <ConnectedAudioLessonView
+          callError={callError}
+          callStatus={callStatus}
+          language={language}
+          lesson={lesson}
+          onEndAudioCall={handleEndAudioCall}
+          onStartAudioCall={handleStartAudioCall}
+          streamError={streamVideo.error}
+          streamIsConnecting={streamVideo.isConnecting}
+          userName={userName}
+        />
+      </StreamCall>
+    );
+  }
+
+  return (
+    <AudioLessonView
+      callError={callError}
+      callStatus={callStatus}
+      isMicMuted
+      language={language}
+      lesson={lesson}
+      onEndAudioCall={handleEndAudioCall}
+      onStartAudioCall={handleStartAudioCall}
+      streamError={streamVideo.error}
+      streamIsConnecting={streamVideo.isConnecting}
+      userName={userName}
+    />
+  );
+}
+
+type AudioCallStatus =
+  | "connecting"
+  | "ended"
+  | "error"
+  | "idle"
+  | "joined"
+  | "joining";
+
+type AudioLessonViewProps = {
+  callError: string | null;
+  callStatus: AudioCallStatus;
+  isMicMuted: boolean;
+  isSpeakingWhileMuted?: boolean;
+  language: SupportedLanguage;
+  lesson: Lesson;
+  onEndAudioCall: () => void;
+  onStartAudioCall: () => void;
+  onToggleMic?: () => void;
+  participantCount?: number;
+  streamError: string | null;
+  streamIsConnecting: boolean;
+  userName: string;
+};
+
+function ConnectedAudioLessonView(
+  props: Omit<AudioLessonViewProps, "isMicMuted">,
+) {
+  const call = useCall();
+  const {
+    useCallCallingState,
+    useMicrophoneState,
+    useParticipantCount,
+  } = useCallStateHooks();
+  const callingState = useCallCallingState();
+  const participantCount = useParticipantCount();
+  const {
+    isSpeakingWhileMuted,
+    optimisticIsMute,
+    status: micStatus,
+  } = useMicrophoneState();
+  const isMicMuted = optimisticIsMute ?? micStatus === "disabled";
+
+  const toggleMic = useCallback(async () => {
+    await call?.microphone.toggle();
+  }, [call]);
+
+  const derivedStatus =
+    callingState === CallingState.JOINED
+      ? "joined"
+      : callingState === CallingState.JOINING ||
+          callingState === CallingState.RECONNECTING
+        ? "joining"
+        : callingState === CallingState.LEFT
+          ? "ended"
+          : props.callStatus;
+
+  return (
+    <AudioLessonView
+      {...props}
+      callStatus={derivedStatus}
+      isMicMuted={isMicMuted}
+      isSpeakingWhileMuted={isSpeakingWhileMuted}
+      onToggleMic={toggleMic}
+      participantCount={participantCount}
+    />
+  );
+}
+
+function AudioLessonView({
+  callError,
+  callStatus,
+  isMicMuted,
+  isSpeakingWhileMuted,
+  language,
+  lesson,
+  onEndAudioCall,
+  onStartAudioCall,
+  onToggleMic,
+  participantCount,
+  streamError,
+  streamIsConnecting,
+  userName,
+}: AudioLessonViewProps) {
   const primaryPhrase = lesson.phrases[0];
   const firstGoal = lesson.goals[0];
   const responsePhrase = primaryPhrase?.phrase ?? language.beginnerGreeting;
   const responseTranslation =
     primaryPhrase?.translation ?? lesson.aiTeacherPrompt.lessonBrief;
   const goalLabel = firstGoal?.label ?? lesson.description;
+  const statusLabel = getCallStatusLabel({
+    callStatus,
+    participantCount,
+    streamIsConnecting,
+  });
+  const helperMessage =
+    callError ??
+    streamError ??
+    (isSpeakingWhileMuted ? "You're speaking while muted." : null);
+  const isBusy = callStatus === "connecting" || callStatus === "joining";
+  const hasJoined = callStatus === "joined";
 
   return (
     <SafeAreaView
@@ -90,7 +345,7 @@ export default function AudioLessonScreen() {
                 className="ml-2 font-poppins-medium text-[17px] leading-[23px] text-lingua-muted"
                 numberOfLines={1}
               >
-                Online • {language.name}
+                {statusLabel} • {language.name}
               </Text>
             </View>
           </View>
@@ -127,7 +382,7 @@ export default function AudioLessonScreen() {
 
           <View className="absolute left-6 top-6 rounded-full bg-lingua-background/90 px-4 py-2">
             <Text className="font-poppins-semibold text-[12px] leading-[17px] text-lingua-purple">
-              Audio session
+              {hasJoined ? "Live audio" : "Audio session"}
             </Text>
           </View>
 
@@ -166,10 +421,13 @@ export default function AudioLessonScreen() {
               icon="videocam"
               label="Camera"
               muted
+              onPress={() => undefined}
             />
             <ControlButton
               icon="mic"
-              label="Mic"
+              label={isMicMuted ? "Unmute" : "Mute"}
+              muted={isMicMuted}
+              onPress={onToggleMic}
             />
             <ControlButton
               label="Subtitles"
@@ -177,7 +435,9 @@ export default function AudioLessonScreen() {
             />
             <ControlButton
               icon="call"
-              label="End Call"
+              label={hasJoined || isBusy ? "End Call" : "Start"}
+              loading={isBusy}
+              onPress={hasJoined || isBusy ? onEndAudioCall : onStartAudioCall}
               tone="danger"
             />
           </View>
@@ -208,7 +468,13 @@ export default function AudioLessonScreen() {
 
             <View className="mt-5 border-t border-lingua-audio-divider pt-4">
               <Text
-                className="font-poppins-semibold text-[14px] leading-[20px] text-lingua-text"
+                className="font-poppins-semibold text-[13px] leading-[19px] text-lingua-muted"
+                numberOfLines={1}
+              >
+                {userName} • {statusLabel}
+              </Text>
+              <Text
+                className="mt-2 font-poppins-semibold text-[14px] leading-[20px] text-lingua-text"
                 numberOfLines={1}
               >
                 {lesson.title} • {goalLabel}
@@ -219,6 +485,11 @@ export default function AudioLessonScreen() {
               >
                 {lesson.aiTeacherPrompt.speakingFocus}
               </Text>
+              {helperMessage ? (
+                <Text className="mt-2 font-poppins-medium text-[12px] leading-[18px] text-lingua-error">
+                  {helperMessage}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>
@@ -248,14 +519,18 @@ type ControlButtonProps = {
   label: string;
   materialIcon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
   muted?: boolean;
+  loading?: boolean;
+  onPress?: () => void;
   tone?: "default" | "danger";
 };
 
 function ControlButton({
   icon,
   label,
+  loading = false,
   materialIcon,
   muted = false,
+  onPress,
   tone = "default",
 }: ControlButtonProps) {
   const isDanger = tone === "danger";
@@ -267,6 +542,8 @@ function ControlButton({
     <Pressable
       accessibilityRole="button"
       className="w-[74px] items-center active:opacity-80"
+      disabled={!onPress || loading}
+      onPress={onPress}
     >
       <View
         className={
@@ -276,7 +553,9 @@ function ControlButton({
         }
         style={styles.controlCircle}
       >
-        {materialIcon ? (
+        {loading ? (
+          <ActivityIndicator color={iconColor} />
+        ) : materialIcon ? (
           <MaterialCommunityIcons
             color={iconColor}
             name={materialIcon}
@@ -296,6 +575,48 @@ function ControlButton({
       </Text>
     </Pressable>
   );
+}
+
+function getCallStatusLabel({
+  callStatus,
+  participantCount,
+  streamIsConnecting,
+}: {
+  callStatus: AudioCallStatus;
+  participantCount?: number;
+  streamIsConnecting: boolean;
+}) {
+  if (streamIsConnecting) {
+    return "Connecting";
+  }
+
+  if (callStatus === "connecting") {
+    return "Creating call";
+  }
+
+  if (callStatus === "joining") {
+    return "Joining";
+  }
+
+  if (callStatus === "joined") {
+    return `${participantCount ?? 1} joined`;
+  }
+
+  if (callStatus === "ended") {
+    return "Ended";
+  }
+
+  if (callStatus === "error") {
+    return "Needs retry";
+  }
+
+  return "Ready";
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Unable to start the audio lesson.";
 }
 
 type FeedbackColumnProps = {

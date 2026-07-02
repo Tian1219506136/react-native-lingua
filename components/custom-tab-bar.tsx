@@ -15,6 +15,9 @@ type IconName = React.ComponentProps<typeof Ionicons>["name"];
 const TAB_BAR_HEIGHT = 88;
 const ACTIVE_CIRCLE_SIZE = 48;
 
+// INVARIANT: this map doubles as the visible-tab allowlist. Any new visible
+// Tabs.Screen in app/(tabs)/_layout.tsx MUST get an entry here (you need to
+// pick its icon anyway); routes absent from this map never render a slot.
 const tabIcons: Record<string, IconName> = {
   home: "home",
   learn: "book-outline",

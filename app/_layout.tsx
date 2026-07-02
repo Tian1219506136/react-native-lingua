@@ -2,12 +2,15 @@ import "../global.css";
 
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { LinguaStreamVideoProvider } from "@/components/StreamVideoProvider";
 import { colors, fonts } from "@/theme/tokens";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { PostHogProvider } from "posthog-react-native";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -38,18 +41,24 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <PostHogProvider
-        apiKey={posthogApiKey}
-        options={{ disabled: !posthogApiKey, host: posthogHost }}
-      >
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.neutral.background },
-            headerShown: false,
-          }}
-        />
-      </PostHogProvider>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <PostHogProvider
+            apiKey={posthogApiKey}
+            options={{ disabled: !posthogApiKey, host: posthogHost }}
+          >
+            <LinguaStreamVideoProvider>
+              <Stack
+                screenOptions={{
+                  contentStyle: { backgroundColor: colors.neutral.background },
+                  headerShown: false,
+                }}
+              />
+            </LinguaStreamVideoProvider>
+          </PostHogProvider>
+        </ClerkProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
