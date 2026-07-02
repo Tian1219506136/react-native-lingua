@@ -7,6 +7,7 @@ export default function SignInScreen() {
       footerLinkText="Sign up"
       footerText="Don't have an account?"
       primaryLabel="Sign In"
+      showPassword
       subtitle="Welcome back to your language journey ✨"
       title="Welcome back"
     />
