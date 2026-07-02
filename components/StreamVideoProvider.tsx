@@ -6,7 +6,14 @@ import {
   type User,
 } from "@stream-io/video-react-native-sdk";
 import { useAuth, useUser } from "@clerk/expo";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -47,6 +54,18 @@ export function LinguaStreamVideoProvider({
   const userName =
     user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? undefined;
   const userImage = user?.imageUrl;
+  const userId = user?.id;
+
+  // Clerk's getToken (and derived user strings) get a fresh identity on every
+  // render. Keeping them in refs stops the connect effect from re-running each
+  // render — that loop tears the StreamVideo wrapper down and remounts the
+  // whole app tree (visible flicker/bouncing).
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const userNameRef = useRef(userName);
+  userNameRef.current = userName;
+  const userImageRef = useRef(userImage);
+  userImageRef.current = userImage;
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +84,7 @@ export function LinguaStreamVideoProvider({
       setError(null);
 
       try {
-        const clerkToken = await getToken();
+        const clerkToken = await getTokenRef.current();
         if (!clerkToken) {
           throw new Error("Clerk session token is unavailable.");
         }
@@ -74,8 +93,8 @@ export function LinguaStreamVideoProvider({
           clerkToken,
           payload: {
             intent: "token",
-            userImage,
-            userName,
+            userImage: userImageRef.current,
+            userName: userNameRef.current,
           },
         });
 
@@ -89,7 +108,7 @@ export function LinguaStreamVideoProvider({
           name: nextSession.userName,
         };
         const tokenProvider = async () => {
-          const freshClerkToken = await getToken();
+          const freshClerkToken = await getTokenRef.current();
           if (!freshClerkToken) {
             throw new Error("Clerk session token is unavailable.");
           }
@@ -98,8 +117,8 @@ export function LinguaStreamVideoProvider({
             clerkToken: freshClerkToken,
             payload: {
               intent: "token",
-              userImage,
-              userName,
+              userImage: userImageRef.current,
+              userName: userNameRef.current,
             },
           });
 
@@ -135,7 +154,8 @@ export function LinguaStreamVideoProvider({
       void activeClient?.disconnectUser();
       setClient(null);
     };
-  }, [getToken, isLoaded, isSignedIn, userImage, userName]);
+    // Reconnect only on real auth-state changes — not on every render.
+  }, [isLoaded, isSignedIn, userId]);
 
   const streamTheme = useMemo<DeepPartial<Theme>>(
     () =>

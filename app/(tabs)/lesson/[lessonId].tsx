@@ -12,15 +12,28 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useLinguaStreamVideo } from "@/components/StreamVideoProvider";
 import { images } from "@/constants/images";
 import { getLanguageByCode } from "@/data/languages";
 import { getLessonById } from "@/data/lessons";
-import { fetchStreamAudioSession } from "@/lib/streamAudio";
+import {
+  fetchStreamAudioSession,
+  startStreamAgentSession,
+  stopStreamAgentSession,
+  type StreamAgentSession,
+} from "@/lib/streamAudio";
 import { useLanguageStore } from "@/store/languageStore";
 import { colors } from "@/theme/tokens";
 import type { Lesson, SupportedLanguage } from "@/types/learning";
@@ -53,18 +66,63 @@ export default function AudioLessonScreen() {
   const { getToken } = useAuth();
   const { user } = useUser();
   const [activeCall, setActiveCall] = useState<Call | null>(null);
+  const [agentSession, setAgentSession] = useState<StreamAgentSession | null>(
+    null,
+  );
+  const [agentStatus, setAgentStatus] = useState<AgentConnectionStatus>("idle");
   const [callStatus, setCallStatus] = useState<AudioCallStatus>("idle");
   const [callError, setCallError] = useState<string | null>(null);
+  const activeCallRef = useRef<Call | null>(null);
+  const agentSessionRef = useRef<StreamAgentSession | null>(null);
+  const getTokenRef = useRef(getToken);
+  const isMountedRef = useRef(true);
+
+  activeCallRef.current = activeCall;
+  agentSessionRef.current = agentSession;
+  getTokenRef.current = getToken;
+
+  const stopCurrentAgentSession = useCallback(async () => {
+    const currentAgentSession = agentSessionRef.current;
+    if (!currentAgentSession) {
+      if (isMountedRef.current) {
+        setAgentStatus("idle");
+      }
+      return;
+    }
+
+    try {
+      const clerkToken = await getTokenRef.current();
+      if (clerkToken) {
+        await stopStreamAgentSession({
+          callId: currentAgentSession.callId,
+          clerkToken,
+          sessionId: currentAgentSession.sessionId,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to stop Vision Agent session:", error);
+    } finally {
+      agentSessionRef.current = null;
+      if (isMountedRef.current) {
+        setAgentSession(null);
+        setAgentStatus("idle");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
-      if (activeCall?.state.callingState !== CallingState.LEFT) {
-        void activeCall?.leave().catch((error) => {
+      isMountedRef.current = false;
+      void stopCurrentAgentSession();
+
+      const currentCall = activeCallRef.current;
+      if (currentCall?.state.callingState !== CallingState.LEFT) {
+        void currentCall?.leave().catch((error) => {
           console.error("Failed to leave Stream audio call:", error);
         });
       }
     };
-  }, [activeCall]);
+  }, [stopCurrentAgentSession]);
 
   const handleStartAudioCall = useCallback(async () => {
     if (!lesson || !language) {
@@ -80,6 +138,7 @@ export default function AudioLessonScreen() {
     }
 
     setCallStatus("connecting");
+    setAgentStatus("idle");
     setCallError(null);
 
     let nextCall: Call | null = null;
@@ -113,12 +172,30 @@ export default function AudioLessonScreen() {
         { reuseInstance: true },
       );
       nextCall = call;
+      activeCallRef.current = nextCall;
       setActiveCall(nextCall);
       nextCall.setDisconnectionTimeout(120);
       await nextCall.join({ maxJoinRetries: 1 });
       await nextCall.camera.disable();
       setCallStatus("joined");
+
+      setAgentStatus("connecting");
+      try {
+        const nextAgentSession = await startStreamAgentSession({
+          callId: session.callId,
+          callType: session.callType ?? "audio_room",
+          clerkToken,
+        });
+        agentSessionRef.current = nextAgentSession;
+        setAgentSession(nextAgentSession);
+        setAgentStatus("connected");
+      } catch (agentError) {
+        setAgentStatus("failed");
+        setCallError(getErrorMessage(agentError));
+      }
     } catch (error) {
+      await stopCurrentAgentSession();
+
       if (nextCall?.state.callingState !== CallingState.LEFT) {
         await nextCall?.leave().catch((leaveError) => {
           console.error("Failed to clean up Stream audio call:", leaveError);
@@ -127,17 +204,28 @@ export default function AudioLessonScreen() {
 
       setActiveCall(null);
       setCallStatus("error");
+      setAgentStatus("failed");
       setCallError(getErrorMessage(error));
     }
-  }, [getToken, language, lesson, streamClient, streamVideo.error, user]);
+  }, [
+    getToken,
+    language,
+    lesson,
+    stopCurrentAgentSession,
+    streamClient,
+    streamVideo.error,
+    user,
+  ]);
 
   const handleEndAudioCall = useCallback(async () => {
     if (!activeCall) {
+      await stopCurrentAgentSession();
       setCallStatus("ended");
       return;
     }
 
     try {
+      await stopCurrentAgentSession();
       if (activeCall.state.callingState !== CallingState.LEFT) {
         await activeCall.leave();
       }
@@ -147,7 +235,7 @@ export default function AudioLessonScreen() {
       setCallStatus("error");
       setCallError(getErrorMessage(error));
     }
-  }, [activeCall]);
+  }, [activeCall, stopCurrentAgentSession]);
 
   if (!lesson || !language) {
     return (
@@ -179,6 +267,7 @@ export default function AudioLessonScreen() {
         <ConnectedAudioLessonView
           callError={callError}
           callStatus={callStatus}
+          agentStatus={agentStatus}
           language={language}
           lesson={lesson}
           onEndAudioCall={handleEndAudioCall}
@@ -195,6 +284,7 @@ export default function AudioLessonScreen() {
     <AudioLessonView
       callError={callError}
       callStatus={callStatus}
+      agentStatus={agentStatus}
       isMicMuted
       language={language}
       lesson={lesson}
@@ -215,7 +305,10 @@ type AudioCallStatus =
   | "joined"
   | "joining";
 
+type AgentConnectionStatus = "connected" | "connecting" | "failed" | "idle";
+
 type AudioLessonViewProps = {
+  agentStatus: AgentConnectionStatus;
   callError: string | null;
   callStatus: AudioCallStatus;
   isMicMuted: boolean;
@@ -250,7 +343,16 @@ function ConnectedAudioLessonView(
   const isMicMuted = optimisticIsMute ?? micStatus === "disabled";
 
   const toggleMic = useCallback(async () => {
-    await call?.microphone.toggle();
+    try {
+      await call?.microphone.toggle();
+    } catch (error) {
+      Alert.alert(
+        "Microphone unavailable",
+        error instanceof Error
+          ? error.message
+          : "Check the app's microphone permission in Settings.",
+      );
+    }
   }, [call]);
 
   const derivedStatus =
@@ -276,6 +378,7 @@ function ConnectedAudioLessonView(
 }
 
 function AudioLessonView({
+  agentStatus,
   callError,
   callStatus,
   isMicMuted,
@@ -481,6 +584,12 @@ function AudioLessonView({
               </Text>
               <Text
                 className="mt-2 font-poppins-medium text-[13px] leading-[19px] text-lingua-muted"
+                numberOfLines={1}
+              >
+                AI teacher: {getAgentStatusLabel(agentStatus)}
+              </Text>
+              <Text
+                className="mt-2 font-poppins-medium text-[13px] leading-[19px] text-lingua-muted"
                 numberOfLines={2}
               >
                 {lesson.aiTeacherPrompt.speakingFocus}
@@ -575,6 +684,22 @@ function ControlButton({
       </Text>
     </Pressable>
   );
+}
+
+function getAgentStatusLabel(status: AgentConnectionStatus) {
+  if (status === "connecting") {
+    return "connecting";
+  }
+
+  if (status === "connected") {
+    return "connected";
+  }
+
+  if (status === "failed") {
+    return "failed";
+  }
+
+  return "idle";
 }
 
 function getCallStatusLabel({
