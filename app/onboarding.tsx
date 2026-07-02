@@ -20,7 +20,7 @@ export default function OnboardingScreen() {
               resizeMode="contain"
             />
             <Text className="font-poppins-bold text-[42px] leading-[52px] text-lingua-text">
-              muolingo
+              lingua
             </Text>
           </View>
         </View>
@@ -64,6 +64,13 @@ export default function OnboardingScreen() {
             className="mt-20 h-[430px] w-[430px]"
             resizeMode="contain"
           />
+        </View>
+
+        <View className="mb-8 flex-row items-center justify-center gap-[10px]">
+          <View className="h-[9px] w-[9px] rounded-full bg-lingua-deep-purple" />
+          <View className="h-[9px] w-[9px] rounded-full bg-lingua-border" />
+          <View className="h-[9px] w-[9px] rounded-full bg-lingua-border" />
+          <View className="h-[9px] w-[9px] rounded-full bg-lingua-border" />
         </View>
 
         <Link href="/" asChild>
