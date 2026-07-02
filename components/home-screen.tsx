@@ -3,8 +3,9 @@ import { useUser } from "@clerk/expo";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
+import { usePostHog } from "posthog-react-native";
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { images } from "@/constants/images";
@@ -51,6 +52,7 @@ function getUserDisplayName(user: ReturnType<typeof useUser>["user"]) {
 
 export function HomeScreenContent() {
   const { user } = useUser();
+  const posthog = usePostHog();
   const selectedLanguageCode = useLanguageStore(
     (state) => state.selectedLanguageCode,
   );
@@ -179,11 +181,21 @@ export function HomeScreenContent() {
               </Text>
             </View>
 
-            <View className="h-[60px] w-[130px] items-center justify-center rounded-[18px] bg-white">
+            <Pressable
+              accessibilityRole="button"
+              className="h-[60px] w-[130px] items-center justify-center rounded-[18px] bg-white active:opacity-80"
+              onPress={() =>
+                posthog.capture("lesson_continue_entry_clicked", {
+                  language_code: currentLesson.languageCode,
+                  lesson_id: currentLesson.id,
+                  unit_id: currentUnit.id,
+                })
+              }
+            >
               <Text className="font-poppins-semibold text-[20px] leading-[28px] text-lingua-purple">
                 Continue
               </Text>
-            </View>
+            </Pressable>
           </View>
 
           <View className="absolute bottom-0 right-0 h-full w-[52%] overflow-hidden">

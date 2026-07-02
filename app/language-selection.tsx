@@ -7,6 +7,7 @@ import type { LanguageCode } from "@/types/learning";
 import { useAuth } from "@clerk/expo";
 import { Image } from "expo-image";
 import { Redirect, router } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
@@ -26,6 +27,7 @@ export default function LanguageSelectionScreen() {
   const setPersistedLanguageCode = useLanguageStore(
     (state) => state.setSelectedLanguageCode,
   );
+  const posthog = usePostHog();
   const [selectedLanguageCode, setSelectedLanguageCode] =
     useState<LanguageCode>(persistedLanguageCode ?? "es");
   const [searchText, setSearchText] = useState("");
@@ -190,6 +192,9 @@ export default function LanguageSelectionScreen() {
             className="mt-7 h-[78px] flex-row items-center justify-center rounded-[28px] bg-lingua-purple active:bg-lingua-deep-purple"
             onPress={() => {
               setPersistedLanguageCode(selectedLanguageCode);
+              posthog.capture("language_selected", {
+                language_code: selectedLanguageCode,
+              });
               router.replace("/");
             }}
           >
