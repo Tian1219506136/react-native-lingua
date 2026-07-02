@@ -32,6 +32,20 @@
   --color-lingua-goal-track: #ffe4c6;
   --color-lingua-plan-green: #f4fceb;
   --color-lingua-soft-purple: #f2efff;
+  --color-lingua-card-shadow: #0d132b;
+  --color-lingua-completed: #20c933;
+  --color-lingua-lesson-icon-bg: #f2efff;
+  --color-lingua-lesson-page: #fbfcff;
+  --color-lingua-tab-muted: #eef0f8;
+  --color-lingua-track-border: #eef0f6;
+  --color-lingua-audio-stage: #d9d1ca;
+  --color-lingua-audio-stage-soft: #f1ece8;
+  --color-lingua-audio-overlay: #bdb7b4;
+  --color-lingua-audio-control: #fbfbff;
+  --color-lingua-audio-divider: #ececf5;
+  --color-lingua-audio-good: #175cff;
+  --color-lingua-audio-great: #4d2fff;
+  --color-lingua-audio-end: #ff3b3f;
 
   /* onboarding speech-bubble palette */
   --color-lingua-bubble-blue: #eef7ff;

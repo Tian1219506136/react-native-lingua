@@ -26,6 +26,22 @@ export const colors = {
     goalTrack: "#FFE4C6",
     planGreen: "#F4FCEB",
     softPurple: "#F2EFFF",
+    cardShadow: "#0D132B",
+    lessonIconBg: "#F2EFFF",
+    lessonPage: "#FBFCFF",
+    tabMuted: "#EEF0F8",
+    trackBorder: "#EEF0F6",
+    audioStage: "#D9D1CA",
+    audioStageSoft: "#F1ECE8",
+    audioOverlay: "#BDB7B4",
+    audioControl: "#FBFBFF",
+    audioDivider: "#ECECF5",
+  },
+  lesson: {
+    completed: "#20C933",
+    audioGood: "#175CFF",
+    audioGreat: "#4D2FFF",
+    audioEnd: "#FF3B3F",
   },
 } as const;
 

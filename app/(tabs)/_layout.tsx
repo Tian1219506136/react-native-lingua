@@ -22,6 +22,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="lesson/[lessonId]"
+        options={{
+          href: null,
+          title: "Lesson",
+        }}
+      />
+      <Tabs.Screen
         name="ai-teacher"
         options={{
           title: "AI Teacher",
