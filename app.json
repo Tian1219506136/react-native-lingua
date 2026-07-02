@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.lingua"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +29,12 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@clerk/expo",
+      [
+        "@clerk/expo",
+        {
+          "appleSignIn": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -38,6 +44,22 @@
           "backgroundColor": "#ffffff",
           "dark": {
             "backgroundColor": "#000000"
+          }
+        }
+      ],
+      "@stream-io/video-react-native-sdk",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "$(PRODUCT_NAME) uses camera access for future video teacher lessons.",
+          "microphonePermission": "$(PRODUCT_NAME) uses microphone access for audio lessons."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24
           }
         }
       ]

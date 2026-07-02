@@ -45,3 +45,6 @@ app-example
 
 # Local AI tooling (PostHog wizard artifact); not app code
 .claude/skills/mcp-analytics/
+
+# GetStream agent skill packs (installed via npx skills add); local AI tooling, not app code
+.agents/skills/stream*/
