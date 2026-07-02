@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { images } from "@/constants/images";
 import { supportedLanguages } from "@/data/languages";
+import { useLanguageStore } from "@/store/languageStore";
 import { colors } from "@/theme/tokens";
 import type { LanguageCode } from "@/types/learning";
+import { useAuth } from "@clerk/expo";
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { Redirect, router } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -16,9 +18,23 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LanguageSelectionScreen() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const persistedLanguageCode = useLanguageStore(
+    (state) => state.selectedLanguageCode,
+  );
+  const hasHydratedLanguage = useLanguageStore((state) => state.hasHydrated);
+  const setPersistedLanguageCode = useLanguageStore(
+    (state) => state.setSelectedLanguageCode,
+  );
   const [selectedLanguageCode, setSelectedLanguageCode] =
-    useState<LanguageCode>("es");
+    useState<LanguageCode>(persistedLanguageCode ?? "es");
   const [searchText, setSearchText] = useState("");
+
+  useEffect(() => {
+    if (persistedLanguageCode) {
+      setSelectedLanguageCode(persistedLanguageCode);
+    }
+  }, [persistedLanguageCode]);
 
   const handleSeeAllLanguagesPress = () => {
     // TODO: wire full language catalog when that chapter exists.
@@ -37,6 +53,14 @@ export default function LanguageSelectionScreen() {
       ),
     );
   }, [searchText]);
+
+  if (!isLoaded || !hasHydratedLanguage) {
+    return null;
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/onboarding" />;
+  }
 
   return (
     <SafeAreaView
@@ -162,10 +186,12 @@ export default function LanguageSelectionScreen() {
             </Text>
           </Pressable>
 
-          {/* TEMP: selection not persisted until store chapter */}
           <Pressable
             className="mt-7 h-[78px] flex-row items-center justify-center rounded-[28px] bg-lingua-purple active:bg-lingua-deep-purple"
-            onPress={() => router.back()}
+            onPress={() => {
+              setPersistedLanguageCode(selectedLanguageCode);
+              router.replace("/");
+            }}
           >
             <Text className="font-poppins-semibold text-[20px] leading-[28px] text-lingua-background">
               Continue

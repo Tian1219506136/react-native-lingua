@@ -463,6 +463,17 @@ Fix errors.
 
 ---
 
+## TEMP Marker Rule
+
+When a design calls for a CTA or flow whose backing state/backend arrives in a later chapter, do NOT build the complex store/logic early. Ship the UI with a `// TEMP:` comment stating exactly what will replace it and in which chapter (e.g. `// TEMP: selection not persisted until store chapter`). Same for QA-only scaffolding (temp sign-out, temp clear-storage buttons): mark with `TEMP` and remove once the real feature lands. Every TEMP marker must be greppable — before a release chapter, run a `TEMP` sweep.
+
+Two hard rules on top of this:
+
+- **Never silently delete or replace an existing screen or TEMP scaffolding.** If a task requires removing one (e.g. a route becomes a redirect gate), list the removal in the report and state where its functionality moved (or that it is intentionally dropped). QA-only controls must be migrated, not deleted — losing the sign-out / clear-storage buttons breaks flow re-testing.
+- **A deviation from the design reference is a deviation, not a feature.** If what you built differs from the referenced design image (style, layout, elements), label it explicitly as a deviation with a one-line reason in the report — never describe it as if it matched the design.
+
+---
+
 ## Git Rules
 
 - Work happens on the `dev` branch; `main` is the stable baseline.
