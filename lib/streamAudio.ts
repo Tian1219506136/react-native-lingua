@@ -46,9 +46,8 @@ export async function fetchStreamAudioSession({
     method: "POST",
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
+    const data = await response.json().catch(() => null);
     throw new Error(
       typeof data?.error === "string"
         ? data.error
@@ -56,7 +55,7 @@ export async function fetchStreamAudioSession({
     );
   }
 
-  return data as StreamAudioSession;
+  return (await response.json()) as StreamAudioSession;
 }
 
 export async function startStreamAgentSession({
@@ -77,9 +76,8 @@ export async function startStreamAgentSession({
     method: "POST",
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
+    const data = await response.json().catch(() => null);
     throw new Error(
       typeof data?.error === "string"
         ? data.error
@@ -87,7 +85,7 @@ export async function startStreamAgentSession({
     );
   }
 
-  return data as StreamAgentSession;
+  return (await response.json()) as StreamAgentSession;
 }
 
 export async function stopStreamAgentSession({

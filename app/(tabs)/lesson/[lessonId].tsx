@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/expo";
 import {
   CallingState,
@@ -9,7 +9,6 @@ import {
   useStreamVideoClient,
 } from "@stream-io/video-react-native-sdk";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -382,32 +381,22 @@ function AudioLessonView({
   callError,
   callStatus,
   isMicMuted,
-  isSpeakingWhileMuted,
   language,
-  lesson,
   onEndAudioCall,
   onStartAudioCall,
   onToggleMic,
-  participantCount,
   streamError,
   streamIsConnecting,
-  userName,
 }: AudioLessonViewProps) {
-  const primaryPhrase = lesson.phrases[0];
-  const firstGoal = lesson.goals[0];
-  const responsePhrase = primaryPhrase?.phrase ?? language.beginnerGreeting;
-  const responseTranslation =
-    primaryPhrase?.translation ?? lesson.aiTeacherPrompt.lessonBrief;
-  const goalLabel = firstGoal?.label ?? lesson.description;
-  const statusLabel = getCallStatusLabel({
+  const headerStatusLabel = getHeaderStatusLabel({
     callStatus,
-    participantCount,
     streamIsConnecting,
   });
-  const helperMessage =
-    callError ??
-    streamError ??
-    (isSpeakingWhileMuted ? "You're speaking while muted." : null);
+  const stageStatusLabel = getStageStatusLabel(callStatus, agentStatus);
+  const errorMessage =
+    callStatus === "error" || agentStatus === "failed"
+      ? (callError ?? streamError)
+      : null;
   const isBusy = callStatus === "connecting" || callStatus === "joining";
   const hasJoined = callStatus === "joined";
 
@@ -422,10 +411,10 @@ function AudioLessonView({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center px-7 pt-2">
+        <View className="relative h-[68px] justify-center px-7 pt-2">
           <Pressable
             accessibilityRole="button"
-            className="h-12 w-12 items-start justify-center active:opacity-70"
+            className="absolute left-7 top-2 h-12 w-12 items-start justify-center active:opacity-70"
             onPress={() => router.back()}
           >
             <Ionicons
@@ -435,9 +424,9 @@ function AudioLessonView({
             />
           </Pressable>
 
-          <View className="min-w-0 flex-1">
+          <View className="absolute left-0 right-0 top-2 items-center">
             <Text
-              className="font-poppins-semibold text-[23px] leading-[31px] text-lingua-text"
+              className="font-poppins-semibold text-[25px] leading-[33px] text-lingua-text"
               numberOfLines={1}
             >
               AI Teacher
@@ -448,47 +437,22 @@ function AudioLessonView({
                 className="ml-2 font-poppins-medium text-[17px] leading-[23px] text-lingua-muted"
                 numberOfLines={1}
               >
-                {statusLabel} • {language.name}
+                {headerStatusLabel}
               </Text>
             </View>
           </View>
 
-          <View className="flex-row items-center gap-3">
-            <HeaderIcon name="videocam" />
-            <View className="h-[58px] w-[58px] items-center justify-center rounded-full border border-lingua-audio-divider bg-lingua-background">
-              <Text className="font-poppins-semibold text-[22px] leading-[30px] text-lingua-text">
-                {lesson.estimatedMinutes + lesson.order}
+          <View className="absolute right-7 top-2 flex-row items-center gap-3">
+            <View className="h-11 flex-row items-center rounded-full border border-lingua-audio-divider bg-lingua-background px-4">
+              <Text className="font-poppins-semibold text-[14px] leading-[20px] text-lingua-text">
+                🎧 Audio
               </Text>
             </View>
             <HeaderIcon name="notifications-outline" />
           </View>
         </View>
 
-        <LinearGradient
-          colors={[colors.neutral.audioStageSoft, colors.neutral.audioOverlay]}
-          style={styles.stage}
-        >
-          <Image
-            contentFit="cover"
-            source={images.palace}
-            style={styles.stageBackground}
-          />
-          <View className="absolute inset-0 bg-lingua-audio-stage opacity-75" />
-
-          <View className="absolute right-5 top-6 overflow-hidden rounded-[24px] border-2 border-lingua-background bg-lingua-audio-control">
-            <Image
-              contentFit="contain"
-              source={images.mascotLogo}
-              style={styles.teacherAvatar}
-            />
-          </View>
-
-          <View className="absolute left-6 top-6 rounded-full bg-lingua-background/90 px-4 py-2">
-            <Text className="font-poppins-semibold text-[12px] leading-[17px] text-lingua-purple">
-              {hasJoined ? "Live audio" : "Audio session"}
-            </Text>
-          </View>
-
+        <View className="mx-[14px] mt-8 overflow-hidden rounded-[28px] bg-lingua-soft-purple" style={styles.stage}>
           <Image
             contentFit="contain"
             source={images.mascotWelcome}
@@ -496,29 +460,34 @@ function AudioLessonView({
           />
 
           <View
-            className="absolute bottom-[160px] left-[82px] right-[40px] rounded-[18px] bg-lingua-background px-7 py-5"
+            className="absolute bottom-5 left-5 right-5 flex-row items-center rounded-[24px] bg-lingua-background px-5 py-4"
             style={styles.responseBubble}
           >
-            <Text className="font-poppins-semibold text-[23px] leading-[31px] text-lingua-text">
-              {responsePhrase}
-            </Text>
-            <View className="mt-2 flex-row items-center justify-between">
+            <View className="min-w-0 flex-1 pr-4">
               <Text
-                className="mr-4 flex-1 font-poppins-medium text-[22px] leading-[29px] text-lingua-text"
+                className="font-poppins-semibold text-[22px] leading-[30px] text-lingua-text"
                 numberOfLines={1}
               >
-                {responseTranslation}
+                {language.beginnerGreeting}!
               </Text>
+              <Text
+                className="mt-1 font-poppins-medium text-[15px] leading-[21px] text-lingua-muted"
+                numberOfLines={1}
+              >
+                {stageStatusLabel}
+              </Text>
+            </View>
+            <View className="h-[54px] w-[54px] items-center justify-center rounded-full bg-lingua-soft-purple">
               <Ionicons
                 color={colors.primary.deepPurple}
                 name="volume-high"
-                size={34}
+                size={30}
               />
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
-        <View className="-mt-[145px] px-9">
+        <View className="mt-8 px-9">
           <View className="flex-row items-start justify-between">
             <ControlButton
               icon="videocam"
@@ -532,9 +501,12 @@ function AudioLessonView({
               muted={isMicMuted}
               onPress={onToggleMic}
             />
+            {/* TEMP: subtitles stub — becomes functional with the live
+                captions chapter (Realtime transcript events); no onPress
+                until then. */}
             <ControlButton
               label="Subtitles"
-              materialIcon="translate"
+              textIcon="Aa"
             />
             <ControlButton
               icon="call"
@@ -569,37 +541,14 @@ function AudioLessonView({
               />
             </View>
 
-            <View className="mt-5 border-t border-lingua-audio-divider pt-4">
+            {errorMessage ? (
               <Text
-                className="font-poppins-semibold text-[13px] leading-[19px] text-lingua-muted"
+                className="mt-4 font-poppins-medium text-[12px] leading-[18px] text-lingua-error"
                 numberOfLines={1}
               >
-                {userName} • {statusLabel}
+                {errorMessage}
               </Text>
-              <Text
-                className="mt-2 font-poppins-semibold text-[14px] leading-[20px] text-lingua-text"
-                numberOfLines={1}
-              >
-                {lesson.title} • {goalLabel}
-              </Text>
-              <Text
-                className="mt-2 font-poppins-medium text-[13px] leading-[19px] text-lingua-muted"
-                numberOfLines={1}
-              >
-                AI teacher: {getAgentStatusLabel(agentStatus)}
-              </Text>
-              <Text
-                className="mt-2 font-poppins-medium text-[13px] leading-[19px] text-lingua-muted"
-                numberOfLines={2}
-              >
-                {lesson.aiTeacherPrompt.speakingFocus}
-              </Text>
-              {helperMessage ? (
-                <Text className="mt-2 font-poppins-medium text-[12px] leading-[18px] text-lingua-error">
-                  {helperMessage}
-                </Text>
-              ) : null}
-            </View>
+            ) : null}
           </View>
         </View>
       </ScrollView>
@@ -613,11 +562,11 @@ type HeaderIconProps = {
 
 function HeaderIcon({ name }: HeaderIconProps) {
   return (
-    <View className="h-[58px] w-[58px] items-center justify-center rounded-full border border-lingua-audio-divider bg-lingua-background">
+    <View className="h-11 w-11 items-center justify-center rounded-full border border-lingua-audio-divider bg-lingua-background">
       <Ionicons
         color={colors.neutral.textPrimary}
         name={name}
-        size={30}
+        size={25}
       />
     </View>
   );
@@ -626,10 +575,10 @@ function HeaderIcon({ name }: HeaderIconProps) {
 type ControlButtonProps = {
   icon?: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
-  materialIcon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
   muted?: boolean;
   loading?: boolean;
   onPress?: () => void;
+  textIcon?: string;
   tone?: "default" | "danger";
 };
 
@@ -637,9 +586,9 @@ function ControlButton({
   icon,
   label,
   loading = false,
-  materialIcon,
   muted = false,
   onPress,
+  textIcon,
   tone = "default",
 }: ControlButtonProps) {
   const isDanger = tone === "danger";
@@ -664,12 +613,10 @@ function ControlButton({
       >
         {loading ? (
           <ActivityIndicator color={iconColor} />
-        ) : materialIcon ? (
-          <MaterialCommunityIcons
-            color={iconColor}
-            name={materialIcon}
-            size={34}
-          />
+        ) : textIcon ? (
+          <Text className="font-poppins-bold text-[26px] leading-[34px] text-lingua-text">
+            {textIcon}
+          </Text>
         ) : (
           <Ionicons
             color={iconColor}
@@ -679,63 +626,58 @@ function ControlButton({
         )}
         {muted ? <View className="absolute h-[3px] w-10 rotate-45 rounded-full bg-lingua-muted" /> : null}
       </View>
-      <Text className="mt-3 text-center font-poppins-semibold text-[13px] leading-[18px] text-lingua-background">
+      <Text className="mt-3 text-center font-poppins-semibold text-[13px] leading-[18px] text-lingua-muted">
         {label}
       </Text>
     </Pressable>
   );
 }
 
-function getAgentStatusLabel(status: AgentConnectionStatus) {
-  if (status === "connecting") {
-    return "connecting";
-  }
-
-  if (status === "connected") {
-    return "connected";
-  }
-
-  if (status === "failed") {
-    return "failed";
-  }
-
-  return "idle";
-}
-
-function getCallStatusLabel({
+function getHeaderStatusLabel({
   callStatus,
-  participantCount,
   streamIsConnecting,
 }: {
   callStatus: AudioCallStatus;
-  participantCount?: number;
   streamIsConnecting: boolean;
 }) {
-  if (streamIsConnecting) {
+  if (
+    streamIsConnecting ||
+    callStatus === "connecting" ||
+    callStatus === "joining"
+  ) {
     return "Connecting";
   }
 
-  if (callStatus === "connecting") {
-    return "Creating call";
-  }
-
-  if (callStatus === "joining") {
-    return "Joining";
-  }
-
   if (callStatus === "joined") {
-    return `${participantCount ?? 1} joined`;
-  }
-
-  if (callStatus === "ended") {
-    return "Ended";
-  }
-
-  if (callStatus === "error") {
-    return "Needs retry";
+    return "Online";
   }
 
   return "Ready";
+}
+
+function getStageStatusLabel(
+  callStatus: AudioCallStatus,
+  agentStatus: AgentConnectionStatus,
+) {
+  if (callStatus === "connecting" || callStatus === "joining") {
+    return "Connecting...";
+  }
+
+  if (callStatus === "joined") {
+    if (agentStatus === "failed") {
+      return "Teacher unavailable — audio only";
+    }
+    if (agentStatus === "connecting") {
+      return "Teacher joining...";
+    }
+    return "Audio lesson in progress 🎧";
+  }
+
+  if (callStatus === "ended") {
+    return "Lesson ended";
+  }
+
+  return "Tap Start to begin";
 }
 
 function getErrorMessage(error: unknown) {
@@ -786,11 +728,11 @@ const styles = StyleSheet.create({
     boxShadow: `0 14px 34px ${withAlpha(colors.neutral.cardShadow, 0.09)}`,
   },
   mascot: {
-    bottom: 124,
-    height: 362,
-    left: 10,
+    alignSelf: "center",
+    height: 380,
+    marginTop: 32,
     position: "absolute",
-    width: 362,
+    width: 380,
   },
   responseBubble: {
     borderCurve: "continuous",
@@ -801,23 +743,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 28,
+    paddingBottom: 34,
   },
   stage: {
     borderCurve: "continuous",
-    borderRadius: 28,
-    height: 690,
-    marginHorizontal: 14,
-    marginTop: 28,
-    overflow: "hidden",
-  },
-  stageBackground: {
-    height: "100%",
-    opacity: 0.32,
-    width: "100%",
-  },
-  teacherAvatar: {
-    height: 136,
-    width: 136,
+    height: 500,
   },
 });
