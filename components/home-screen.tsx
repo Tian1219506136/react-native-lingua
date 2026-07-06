@@ -228,7 +228,7 @@ export function HomeScreenContent() {
           />
           <PlanRow
             iconName="headset"
-            iconTone="purple"
+            iconTone="blue"
             subtitle={aiConversationLabel}
             title="AI Conversation"
           />
@@ -280,7 +280,7 @@ export function HomeScreenContent() {
 
 type PlanRowProps = {
   iconName: React.ComponentProps<typeof Ionicons>["name"];
-  iconTone: "coral" | "purple";
+  iconTone: "blue" | "coral" | "purple";
   isDone?: boolean;
   subtitle: string;
   title: string;
@@ -299,7 +299,9 @@ function PlanRow({
         className={
           iconTone === "purple"
             ? "h-[54px] w-[54px] items-center justify-center rounded-[12px] bg-lingua-purple"
-            : "h-[54px] w-[54px] items-center justify-center rounded-[12px] bg-lingua-error"
+            : iconTone === "blue"
+              ? "h-[54px] w-[54px] items-center justify-center rounded-[12px] bg-lingua-blue"
+              : "h-[54px] w-[54px] items-center justify-center rounded-[12px] bg-lingua-error"
         }
       >
         <Ionicons
@@ -342,7 +344,7 @@ function PlanRow({
 const styles = StyleSheet.create({
   learningCard: {
     borderCurve: "continuous",
-    borderRadius: 20,
+    borderRadius: 28,
     boxShadow: `0 8px 18px ${withAlpha(colors.primary.purple, 0.16)}`,
     height: 216,
     marginTop: 28,

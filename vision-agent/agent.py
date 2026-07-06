@@ -77,12 +77,13 @@ async def join_call(agent: Agent, call_type: str, call_id: str, **kwargs) -> Non
         )
         await agent.simple_response(
             text=(
-                "Greet the learner in English, introduce yourself as their "
-                "Lingua AI teacher, mention that today's focus is "
-                f"{language_name}{lesson_phrase}. "
-                f"Use this speaking focus: {focus}. "
-                "Start with one short practice question using only the lesson "
-                "goals, vocabulary, and phrases."
+                "Greet the learner warmly in English as their Lingua teacher. "
+                f"Say that today you're practicing {language_name}{lesson_phrase}, "
+                f"then use this focus: {focus}. "
+                "Sound like a real teacher: upbeat, human, and brief. "
+                "Use only this lesson's goal, vocabulary, phrases, and context; "
+                "mostly speak English, say target-language words slowly with "
+                "translations, and start with one tiny repeat-after-me question."
             )
         )
         await agent.finish()
