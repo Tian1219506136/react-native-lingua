@@ -377,6 +377,7 @@ function ConnectedAudioLessonView(
 }
 
 function AudioLessonView({
+  agentStatus,
   callError,
   callStatus,
   isMicMuted,
@@ -391,9 +392,11 @@ function AudioLessonView({
     callStatus,
     streamIsConnecting,
   });
-  const stageStatusLabel = getStageStatusLabel(callStatus);
+  const stageStatusLabel = getStageStatusLabel(callStatus, agentStatus);
   const errorMessage =
-    callStatus === "error" ? callError ?? streamError : null;
+    callStatus === "error" || agentStatus === "failed"
+      ? (callError ?? streamError)
+      : null;
   const isBusy = callStatus === "connecting" || callStatus === "joining";
   const hasJoined = callStatus === "joined";
 
@@ -498,6 +501,9 @@ function AudioLessonView({
               muted={isMicMuted}
               onPress={onToggleMic}
             />
+            {/* TEMP: subtitles stub — becomes functional with the live
+                captions chapter (Realtime transcript events); no onPress
+                until then. */}
             <ControlButton
               label="Subtitles"
               textIcon="Aa"
@@ -649,12 +655,21 @@ function getHeaderStatusLabel({
   return "Ready";
 }
 
-function getStageStatusLabel(callStatus: AudioCallStatus) {
+function getStageStatusLabel(
+  callStatus: AudioCallStatus,
+  agentStatus: AgentConnectionStatus,
+) {
   if (callStatus === "connecting" || callStatus === "joining") {
     return "Connecting...";
   }
 
   if (callStatus === "joined") {
+    if (agentStatus === "failed") {
+      return "Teacher unavailable — audio only";
+    }
+    if (agentStatus === "connecting") {
+      return "Teacher joining...";
+    }
     return "Audio lesson in progress 🎧";
   }
 
